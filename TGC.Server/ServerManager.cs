@@ -124,16 +124,24 @@ public class ServerManager
         }
         Log.Verbose("Get request made to path {Path}", path);
 
-        var pagesIndexJson = File.ReadAllText("Pages/index.json");
+        var pagesDir = DotEnv.Get(DotEnv.ServerPagesDir);
+        if(!DotEnv.IsSet(DotEnv.ServerPagesDir) || pagesDir == null || !Directory.Exists(pagesDir))
+        {
+            Log.Error("Server pages dir was not configured correctly! Either it is not set, or the directory does not exist. Full path: {FullPath}", pagesDir != null ? Path.GetFullPath(pagesDir) : "null");
+            ctx.Response.StatusCode = 500;
+            return "Error 500: The server was not configured correctly";
+        }
+
+        var pagesIndexJson = File.ReadAllText(Path.Combine(pagesDir, "index.json"));
         var pagesIndex = JsonSerializer.Deserialize<JsonObject>(pagesIndexJson);
         var pageFile = pagesIndex?[path]?.ToString();
 
-        if(pageFile == null || !File.Exists("Pages/" + pageFile)) {
+        if(pageFile == null || !File.Exists(Path.Combine(pagesDir, pageFile))) {
             ctx.Response.StatusCode = 404;
             pageFile = "404.html";
         }
 
-        var pageHtml = File.ReadAllText("Pages/" + pageFile);
+        var pageHtml = File.ReadAllText(Path.Combine(pagesDir, pageFile));
         return pageHtml;
     }
 

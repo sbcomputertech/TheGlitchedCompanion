@@ -13,6 +13,7 @@ namespace TGC.Server
         public const string BasePort = "TGC_BasePort";
         public const string RemoteAdminAuthKey = "TGC_RemoteAdminAuthKey";
         public const string AllowedClientVersion = "TGC_AllowedClientVersion";
+        public const string ServerPagesDir = "TGC_ServerPagesDir";
 
         public static void Load(string filePath)
         {
