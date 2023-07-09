@@ -1,0 +1,13 @@
+Libraries:
+
+- Game folder/The Glitched Attraction_Data/Managed/...
+Assembly-CSharp.dll
+UnityEngine.dll
+UnityEngine.CoreModule.dll
+
+- Game folder/BepInEx/core/...
+BepInEx.Core.dll
+BepInEx.Unity.dll
+0Harmony.dll
+
+You may have to copy more DLLs from the Managed folder should your code require it
