@@ -4,7 +4,7 @@ using UnityEngine;
 namespace TGC.Client
 {
     [HarmonyPatch(typeof(Player_DevConsole))]
-    public static class DevConsolePatch
+    public static class DevConsoleInterop
     {
         [HarmonyPatch(nameof(Player_DevConsole.Update))]
         [HarmonyPrefix]

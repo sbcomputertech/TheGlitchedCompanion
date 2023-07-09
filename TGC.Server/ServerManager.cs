@@ -10,6 +10,7 @@ public class ServerManager
 {
     private Thread _thread;
     private List<PlayerInfo> _players;
+    private int _maxPlayers;
     private HttpListener _listener;
     private int _basePort;
     private int _requestIndex = -1;
@@ -21,6 +22,7 @@ public class ServerManager
         _cancellationToken = cancellationToken;
 
         _players = new List<PlayerInfo>(maxPlayers);
+        _maxPlayers = maxPlayers;
         _basePort = basePort;
 
         var prefix = "http://+:" + _basePort + "/";
@@ -49,6 +51,24 @@ public class ServerManager
                 return;
             }
             var ctx = ctxTask.Result;
+
+            var method = ctx.Request.HttpMethod;
+            if(method == "GET")
+            {
+                var responseText = HandleGetRequest(ctx);
+                var responseBytes = Encoding.UTF8.GetBytes(responseText);
+                ctx.Response.OutputStream.Write(responseBytes);
+                ctx.Response.OutputStream.Close();
+                ctx.Response.Close();
+                continue;
+            } 
+            else if(method != "POST")
+            {
+                ctx.Response.StatusCode = 405; // method not allowed
+                ctx.Response.AddHeader("Allow", "GET, POST");
+                ctx.Response.Close();
+                continue;
+            }
 
             _requestIndex++;
             var req = ctx.Request;
@@ -93,6 +113,28 @@ public class ServerManager
         }
 
         _listener.Close();
+    }
+
+    private string HandleGetRequest(HttpListenerContext ctx)
+    {
+        var path = ctx.Request.Url.AbsolutePath;
+        if(path.EndsWith("/") && path.Length > 1)
+        {   // remove trailing slash, but not for the root url
+            path = path.Substring(0, path.Length - 1);
+        }
+        Log.Verbose("Get request made to path {Path}", path);
+
+        var pagesIndexJson = File.ReadAllText("Pages/index.json");
+        var pagesIndex = JsonSerializer.Deserialize<JsonObject>(pagesIndexJson);
+        var pageFile = pagesIndex?[path]?.ToString();
+
+        if(pageFile == null || !File.Exists("Pages/" + pageFile)) {
+            ctx.Response.StatusCode = 404;
+            pageFile = "404.html";
+        }
+
+        var pageHtml = File.ReadAllText("Pages/" + pageFile);
+        return pageHtml;
     }
 
     private bool HandlePacket(string type, JsonObject requestData, IPEndPoint remote, out object response)
@@ -192,9 +234,24 @@ public class ServerManager
 
     private bool HandlePlayerJoin(JsonObject data, IPEndPoint client, out object response)
     {
+        if(_players.Count >= _maxPlayers)
+        {
+            response = "The server is currently full! Please wait for a spot to free up";
+            return false;
+        }
+
         if(_players.Any(p => p.Name == data["name"].ToString()))
         {
             response = "A player already exists with that name";
+            return false;
+        }
+
+        var clientVer = data["clientVersion"].ToString();
+        var allowedVer = DotEnv.Get(DotEnv.AllowedClientVersion);
+        if (clientVer  != allowedVer)
+        {
+            response = $"The server only supports client version {allowedVer}, while you are on {clientVer}";
+            Log.Error("Client at {Client} tried to join with version {ClientVer}, while the server is set up to use version {ServerVer}", client, clientVer, allowedVer);
             return false;
         }
 
@@ -204,7 +261,7 @@ public class ServerManager
             JoinedAt = DateTimeOffset.Now,
             Guid = Guid.NewGuid(),
             IP = client.ToString(),
-            ClientVersion = data["clientVersion"].ToString(),
+            ClientVersion = clientVer,
             SocketPort = _basePort + 1 + _players.Count
         };
         info.Connection = new PlayerConnection(info, _cancellationToken);
@@ -220,15 +277,18 @@ public class ServerManager
         var statusResponse = new Dictionary<string, object>
         {
             ["inGame"] = Program.InGame,
-            ["uptime"] = Program.Uptime
-        };
+            ["uptime"] = Program.Uptime,
+            ["currentPlayers"] = _players.Count,
+            ["maxPlayers"] = _maxPlayers
+    };
 
         if(Program.InGame)
         {
 
-        } else
+        } 
+        else
         {
-            statusResponse["currentPlayers"] = _players.Count;
+            
         }
 
         return statusResponse;
