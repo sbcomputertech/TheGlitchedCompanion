@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TGC.Shared
+namespace TGC.Client
 {
     public enum WsMessageType
     {

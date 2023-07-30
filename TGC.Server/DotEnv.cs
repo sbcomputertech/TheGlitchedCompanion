@@ -15,8 +15,9 @@ namespace TGC.Server
         public const string AllowedClientVersion = "TGC_AllowedClientVersion";
         public const string ServerPagesDir = "TGC_ServerPagesDir";
 
-        public static void Load(string filePath)
+        public static void Load()
         {
+            var filePath = "./.env";
             if (!File.Exists(filePath))
             {
                 Log.Error("No .env file was found in the current working directory");

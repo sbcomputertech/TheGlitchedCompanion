@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TGC.Shared;
+using TGC.Client;
 
 namespace TGC.Server;
 
@@ -43,7 +43,7 @@ public class PlayerConnection
 
     private void ConnectionEstablished()
     {
-        Log.Verbose("WS connectionon port {Port} established", _socketPort);
+        Log.Verbose("WS connection on port {Port} established", _socketPort);
         Task.Run(RecieverProc);
     }
 
@@ -58,7 +58,9 @@ public class PlayerConnection
                 _httpContext.Response.Close();
                 continue;
             }
-            _wsContext = _httpContext.AcceptWebSocketAsync("tgc.ws.gamesync").Result;
+
+            string? proto = null; //"tgc.ws.gamesync";
+            _wsContext = _httpContext.AcceptWebSocketAsync(proto).Result;
             _ws = _wsContext.WebSocket;
             ConnectionEstablished();
             break;
@@ -101,11 +103,15 @@ public class PlayerConnection
                 await  _ws.CloseAsync(WebSocketCloseStatus.ProtocolError, "Too many handshake fails!", _cancellationToken);
                 return;
             }
+            
+            Log.Verbose("Starting handshake attempt {AttemptNum} for client {ClientName}", handshakeFails + 1, _info.Name);
 
             var handshakeObj = new Dictionary<string, object>();
             handshakeObj["t"] = WsMessageType.StartHandshake_S2C;
             handshakeObj["token"] = _playerToken;
             await WsSend(JsonSerializer.Serialize(handshakeObj));
+            
+            Log.Verbose("Sent token packet to client {Client}. Token: {Token}", _info.Name, _playerToken.Value);
 
             var msg = await WsRecieve();
             JsonObject msgObject;
@@ -126,7 +132,7 @@ public class PlayerConnection
                 var expectedSig = GetSignature();
                 if(sig != expectedSig)
                 {
-                    Log.Verbose("Player {Name} sent handshake response with invalid signature! Restarting handshake", _info.Name);
+                    Log.Verbose("Player {Name} sent handshake response with invalid signature! Expected '{Sig}' Restarting handshake", _info.Name, expectedSig);
                     handshakeFails++;
                     continue;
                 }
@@ -250,7 +256,7 @@ public class PlayerConnection
 
     private string GetSignature()
     {
-        var str = _info.Guid.ToString() + _playerToken.Value;
+        var str = _info.Guid + _playerToken.Value;
         var bytes = Encoding.UTF8.GetBytes(str);
         var hashed = MD5.HashData(bytes);
         return Convert.ToBase64String(hashed);

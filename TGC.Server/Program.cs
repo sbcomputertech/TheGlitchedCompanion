@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using Serilog.Core;
+using System.Net;
 using System.Text.Json;
 
 namespace TGC.Server;
@@ -16,6 +17,7 @@ public class Program
 
     public static TimeSpan Uptime { get; private set; }
     public static bool InGame { get; private set; }
+    public static IPAddress ServerPublicIp { get; private set; }
 
     public static void Main(string[] args) => new Program(args).Run();
 
@@ -26,7 +28,7 @@ public class Program
             .WriteTo.Console()
             .CreateLogger();
 
-        DotEnv.Load(".env");
+        DotEnv.Load();
         if(DotEnv.Get(DotEnv.RemoteAdminAuthKey) == "ExamplePassword_CHANGE_ME")
         {
             Log.Fatal("For security reasons, change the remote admin auth password in the .env file, or remove the entry to disable the feature");
@@ -43,6 +45,16 @@ public class Program
         }
 
         _startedAt = DateTimeOffset.Now;
+
+        var pubIp = Utils.GetPublicIp();
+        if(pubIp == null)
+        {
+            ServerPublicIp = IPAddress.Loopback;
+        } else
+        {
+            ServerPublicIp = IPAddress.Parse(pubIp);
+        }
+        Log.Information("Got public IP of {IP}", ServerPublicIp);
 
         _serverCancellation = new CancellationTokenSource();
         _server = new ServerManager(2, _basePort, _serverCancellation.Token);

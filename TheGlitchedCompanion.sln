@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TGC.Shared", "TGC.Shared\TG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SigGen", "SigGen\SigGen.csproj", "{15EEE98E-174D-45F4-B5B0-9DD484AA66C8}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ENV Files", "ENV Files", "{47EB7A6A-FE72-4B40-BF49-5B0BEAF6F8B8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server ENV Files", "Server ENV Files", "{47EB7A6A-FE72-4B40-BF49-5B0BEAF6F8B8}"
 	ProjectSection(SolutionItems) = preProject
 		TGC.Server\bin\Debug\net7.0\.env = TGC.Server\bin\Debug\net7.0\.env
 		example.env = example.env
